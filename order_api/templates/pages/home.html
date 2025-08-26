@@ -156,12 +156,124 @@
         </div>
     </div>
 </div>
+
+<!-- Payment Modal (for clients) -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="paymentOrderDetails" class="mb-4">
+                    <!-- Order details will be populated here -->
+                </div>
+                
+                <h6>Select Payment Method</h6>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card payment-method" data-method="card" onclick="selectPaymentMethod('card')">
+                            <div class="card-body text-center">
+                                <i class="fas fa-credit-card fa-2x mb-2 text-primary"></i>
+                                <h6>Credit/Debit Card</h6>
+                                <small class="text-muted">Visa, Mastercard, etc.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card payment-method" data-method="wallet" onclick="selectPaymentMethod('wallet')">
+                            <div class="card-body text-center">
+                                <i class="fas fa-wallet fa-2x mb-2 text-success"></i>
+                                <h6>Digital Wallet</h6>
+                                <small class="text-muted">PayPal, Apple Pay, etc.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Payment Form -->
+                <div id="cardPaymentForm" class="payment-form" style="display: none;">
+                    <h6>Card Details</h6>
+                    <form>
+                        <div class="mb-3">
+                            <label for="cardNumber" class="form-label">Card Number</label>
+                            <input type="text" class="form-control" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="expiryDate" class="form-label">Expiry Date</label>
+                                <input type="text" class="form-control" id="expiryDate" placeholder="MM/YY" maxlength="5">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="cvv" class="form-label">CVV</label>
+                                <input type="text" class="form-control" id="cvv" placeholder="123" maxlength="4">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Wallet Payment Form -->
+                <div id="walletPaymentForm" class="payment-form" style="display: none;">
+                    <h6>Wallet Payment</h6>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        You will be redirected to your wallet provider to complete the payment.
+                    </div>
+                </div>
+
+                <!-- Payment Processing -->
+                <div id="paymentProcessing" style="display: none;">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Processing...</span>
+                        </div>
+                        <p class="mt-2">Processing your payment...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="processPaymentBtn" onclick="processPayment()" disabled>
+                    <i class="fas fa-lock"></i> Pay Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endif %}
 
 {% endblock %}
 
 {% block inline_javascript %}
 {% csrf_token %}
+<style>
+    .payment-method {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .payment-method:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .payment-method.selected {
+        border-color: #0d6efd;
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+    
+    .payment-form {
+        border-top: 1px solid #dee2e6;
+        padding-top: 1rem;
+        margin-top: 1rem;
+    }
+    
+    #cardNumber {
+        letter-spacing: 2px;
+    }
+</style>
 <script>
     // Global variables
     let socket = null;
@@ -170,6 +282,8 @@
     let maxReconnectAttempts = 10;
     let baseReconnectInterval = 2000; // 2 seconds
     let reconnectTimer = null;
+    let currentPaymentOrderId = null;
+    let selectedPaymentMethod = null;
 
     // Get CSRF token from Django
     function getCSRFToken() {
@@ -586,22 +700,170 @@
     }
 
     async function payOrder(orderId) {
-        if (!confirm('Are you sure you want to pay for this order?')) {
-            return;
-        }
-        
         try {
-            await makeApiRequest(`/api/orders/${orderId}/pay/`, {
-                method: 'POST'
-            });
+            // Get order details first
+            const orders = await makeApiRequest('/api/orders/');
+            const order = orders.find(o => o.id === orderId);
             
-            loadOrders();
-            alert('Payment successful!');
+            if (!order) {
+                alert('Order not found');
+                return;
+            }
+            
+            // Set current payment order
+            currentPaymentOrderId = orderId;
+            
+            // Populate order details in payment modal
+            const orderDetailsDiv = document.getElementById('paymentOrderDetails');
+            orderDetailsDiv.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">Order #${order.id}</h6>
+                        <p class="card-text">${order.description}</p>
+                        <div class="d-flex justify-content-between">
+                            <span><strong>Worker:</strong> ${order.worker ? order.worker.name || order.worker.email : 'N/A'}</span>
+                            <span><strong>Amount:</strong> <span class="text-success h5">$${order.price}</span></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Reset payment form
+            resetPaymentForm();
+            
+            // Show payment modal
+            const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+            paymentModal.show();
+            
         } catch (error) {
-            console.error('Error processing payment:', error);
-            alert('Error processing payment. Please try again.');
+            console.error('Error loading order for payment:', error);
+            alert('Error loading order details. Please try again.');
         }
     }
+
+    function selectPaymentMethod(method) {
+        selectedPaymentMethod = method;
+        
+        // Update UI
+        document.querySelectorAll('.payment-method').forEach(el => {
+            el.classList.remove('selected');
+        });
+        document.querySelector(`[data-method="${method}"]`).classList.add('selected');
+        
+        // Show appropriate form
+        document.querySelectorAll('.payment-form').forEach(form => {
+            form.style.display = 'none';
+        });
+        
+        if (method === 'card') {
+            document.getElementById('cardPaymentForm').style.display = 'block';
+        } else if (method === 'wallet') {
+            document.getElementById('walletPaymentForm').style.display = 'block';
+        }
+        
+        // Enable payment button
+        document.getElementById('processPaymentBtn').disabled = false;
+    }
+
+    function resetPaymentForm() {
+        selectedPaymentMethod = null;
+        currentPaymentOrderId = null;
+        
+        // Reset UI
+        document.querySelectorAll('.payment-method').forEach(el => {
+            el.classList.remove('selected');
+        });
+        document.querySelectorAll('.payment-form').forEach(form => {
+            form.style.display = 'none';
+        });
+        document.getElementById('paymentProcessing').style.display = 'none';
+        document.getElementById('processPaymentBtn').disabled = true;
+        
+        // Clear form fields
+        document.getElementById('cardNumber').value = '';
+        document.getElementById('expiryDate').value = '';
+        document.getElementById('cvv').value = '';
+    }
+
+    async function processPayment() {
+        if (!selectedPaymentMethod || !currentPaymentOrderId) {
+            alert('Please select a payment method');
+            return;
+        }
+
+        // Validate form based on payment method
+        if (selectedPaymentMethod === 'card') {
+            const cardNumber = document.getElementById('cardNumber').value;
+            const expiryDate = document.getElementById('expiryDate').value;
+            const cvv = document.getElementById('cvv').value;
+            
+            if (!cardNumber || !expiryDate || !cvv) {
+                alert('Please fill in all card details');
+                return;
+            }
+        }
+
+        // Show processing state
+        document.getElementById('paymentProcessing').style.display = 'block';
+        document.getElementById('processPaymentBtn').disabled = true;
+
+        // Simulate payment processing delay
+        setTimeout(async () => {
+            try {
+                await makeApiRequest(`/api/orders/${currentPaymentOrderId}/pay/`, {
+                    method: 'POST'
+                });
+                
+                // Close modal and refresh orders
+                const modal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+                modal.hide();
+                loadOrders();
+                
+                alert('Payment successful! Thank you for your payment.');
+                
+            } catch (error) {
+                console.error('Error processing payment:', error);
+                alert(`Payment failed: ${error.message}`);
+            } finally {
+                // Hide processing state
+                document.getElementById('paymentProcessing').style.display = 'none';
+                document.getElementById('processPaymentBtn').disabled = false;
+            }
+        }, 2000); // 2 second delay to simulate processing
+    }
+
+    // Format card number input
+    document.addEventListener('DOMContentLoaded', () => {
+        const cardNumberInput = document.getElementById('cardNumber');
+        if (cardNumberInput) {
+            cardNumberInput.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\s/g, '');
+                let formattedValue = value.replace(/(.{4})/g, '$1 ').trim();
+                if (formattedValue.length > 19) {
+                    formattedValue = formattedValue.substring(0, 19);
+                }
+                e.target.value = formattedValue;
+            });
+        }
+
+        const expiryInput = document.getElementById('expiryDate');
+        if (expiryInput) {
+            expiryInput.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length >= 2) {
+                    value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                }
+                e.target.value = value;
+            });
+        }
+
+        const cvvInput = document.getElementById('cvv');
+        if (cvvInput) {
+            cvvInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/\D/g, '');
+            });
+        }
+    });
 
     async function cancelOrder(orderId) {
         if (!confirm('Are you sure you want to cancel this order?')) {
