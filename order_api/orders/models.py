@@ -6,6 +6,9 @@ from order_api.users.models import User
 class OrderStatus(models.TextChoices):
     CREATED = "created", "Created"
     RECEIVED = "received", "Received"
+    COMPLETED = "completed", "Completed"
+    PAID = "paid", "Paid"
+    CANCELLED = "cancelled", "Cancelled"
 
 
 class Order(models.Model):

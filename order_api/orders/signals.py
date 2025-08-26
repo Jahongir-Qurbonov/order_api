@@ -10,8 +10,10 @@ from .models import Order
 def order_notification(sender, instance, created, **kwargs):
     channel_layer = get_channel_layer()
 
+    if not channel_layer:
+        return
+
     if created:
-        # Notify all workers about new order
         async_to_sync(channel_layer.group_send)(
             "workers",
             {
@@ -21,7 +23,6 @@ def order_notification(sender, instance, created, **kwargs):
             },
         )
     else:
-        # Notify the client about status update
         status_display = instance.get_status_display()
         async_to_sync(channel_layer.group_send)(
             f"client_{instance.owner.id}",
@@ -32,3 +33,15 @@ def order_notification(sender, instance, created, **kwargs):
                 "message": f"Order #{instance.id} status updated to {status_display}",
             },
         )
+
+        if instance.worker:
+            worker_msg = f"Order #{instance.id} status updated to {status_display}"
+            async_to_sync(channel_layer.group_send)(
+                f"worker_{instance.worker.id}",
+                {
+                    "type": "order_status_update",
+                    "order_id": instance.id,
+                    "status": instance.status,
+                    "message": worker_msg,
+                },
+            )
