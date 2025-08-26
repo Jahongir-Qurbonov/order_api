@@ -1,5 +1,7 @@
 from django.db import models
 
+from order_api.users.models import User
+
 
 class OrderStatus(models.TextChoices):
     CREATED = "created", "Created"
@@ -7,13 +9,18 @@ class OrderStatus(models.TextChoices):
 
 
 class Order(models.Model):
-    owner = models.ForeignKey("users.User", on_delete=models.CASCADE)
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="orders",
+    )
 
     worker = models.ForeignKey(
-        "users.User",
+        User,
         null=True,
         blank=True,
         on_delete=models.CASCADE,
+        related_name="assigned_orders",
     )
 
     description = models.CharField(max_length=255)
