@@ -56,10 +56,12 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], serializer_class=ReceiveOrderSerializer)
     def receive(self, request: Request, pk=None):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
         order = cast("Order", self.get_object())
+        user = cast("User", request.user)
+
+        if user.role != UserRoles.WORKER:
+            msg = "Only workers can receive orders."
+            raise PermissionDenied(msg)
 
         if order.status != OrderStatus.CREATED:
             msg = "Only created orders can be received."
@@ -81,17 +83,14 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = cast("Order", self.get_object())
         user = cast("User", request.user)
 
-        # Only workers can complete orders
         if user.role != UserRoles.WORKER:
             msg = "Only workers can complete orders"
             raise PermissionDenied(msg)
 
-        # Only assigned worker can complete
         if order.worker != user:
             msg = "You can only complete orders assigned to you"
             raise PermissionDenied(msg)
 
-        # Order must be in received status
         if order.status != OrderStatus.RECEIVED:
             msg = "Only received orders can be completed"
             raise PermissionDenied(msg)
@@ -107,17 +106,14 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = cast("Order", self.get_object())
         user = cast("User", request.user)
 
-        # Only clients can pay for orders
         if user.role != UserRoles.CLIENT:
             msg = "Only clients can pay for orders"
             raise PermissionDenied(msg)
 
-        # Only order owner can pay
         if order.owner != user:
             msg = "You can only pay for your own orders"
             raise PermissionDenied(msg)
 
-        # Order must be completed
         if order.status != OrderStatus.COMPLETED:
             msg = "Only completed orders can be paid"
             raise PermissionDenied(msg)
@@ -133,22 +129,17 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = cast("Order", self.get_object())
         user = cast("User", request.user)
 
-        # Both clients and workers can cancel orders with different rules
         if user.role == UserRoles.CLIENT:
-            # Client can cancel only their own orders
             if order.owner != user:
                 msg = "You can only cancel your own orders"
                 raise PermissionDenied(msg)
-            # Client can cancel only created or received orders
             if order.status not in [OrderStatus.CREATED, OrderStatus.RECEIVED]:
                 msg = "You can only cancel orders that are created or received"
                 raise PermissionDenied(msg)
         elif user.role == UserRoles.WORKER:
-            # Worker can cancel only assigned orders
             if order.worker != user:
                 msg = "You can only cancel orders assigned to you"
                 raise PermissionDenied(msg)
-            # Worker can cancel only received orders
             if order.status != OrderStatus.RECEIVED:
                 msg = "You can only cancel received orders"
                 raise PermissionDenied(msg)
