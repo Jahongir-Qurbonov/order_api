@@ -7,7 +7,8 @@ from order_api.users.models import User
 class UserSerializer(serializers.ModelSerializer[User]):
     class Meta:
         model = User
-        fields = ["name", "url"]
+        fields = ["name", "email", "url"]
+        read_only_fields = ["email"]
 
         extra_kwargs = {
             "url": {"view_name": "api:user-detail", "lookup_field": "pk"},
