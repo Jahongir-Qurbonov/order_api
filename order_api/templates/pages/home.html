@@ -100,7 +100,19 @@
     <div class="row mt-4">
         <div class="col-12">
             <div class="alert alert-info">
-                <strong>WebSocket Status:</strong> <span id="wsStatus">Disconnected</span>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>WebSocket Status:</strong> <span id="wsStatus">Disconnected</span>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary me-2" onclick="initializeWebSocket()">
+                            <i class="fas fa-plug"></i> Reconnect
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="disconnectWebSocket()">
+                            <i class="fas fa-times"></i> Disconnect
+                        </button>
+                    </div>
+                </div>
                 <div id="wsMessages" class="mt-2" style="max-height: 200px; overflow-y: auto;"></div>
             </div>
         </div>
@@ -154,6 +166,10 @@
     // Global variables
     let socket = null;
     const userRole = '{{ user.role }}';
+    let reconnectAttempts = 0;
+    let maxReconnectAttempts = 10;
+    let baseReconnectInterval = 2000; // 2 seconds
+    let reconnectTimer = null;
 
     // Get CSRF token from Django
     function getCSRFToken() {
@@ -172,16 +188,52 @@
         }
     });
 
+    // Clean up WebSocket on page unload
+    window.addEventListener('beforeunload', () => {
+        if (socket) {
+            socket.close(1000, 'Page unload');
+        }
+    });
+
+    // Handle page visibility changes (e.g., tab switching)
+    document.addEventListener('visibilitychange', () => {
+        if ('{{ user.is_authenticated }}' === 'True') {
+            if (document.hidden) {
+                // Page is hidden - could pause reconnection attempts
+                console.log('Page hidden');
+            } else {
+                // Page is visible - ensure WebSocket is connected
+                console.log('Page visible');
+                if (!socket || socket.readyState !== WebSocket.OPEN) {
+                    initializeWebSocket();
+                }
+            }
+        }
+    });
+
     // WebSocket Functions
     function initializeWebSocket() {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            return; // Already connected
+        }
+
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws/orders/`;
         
+        console.log('Attempting to connect to WebSocket...');
         socket = new WebSocket(wsUrl);
         
         socket.onopen = function(e) {
+            console.log('WebSocket connected successfully');
             updateWSStatus('Connected', 'success');
             addWSMessage('Connected to WebSocket');
+            
+            // Reset reconnect attempts on successful connection
+            reconnectAttempts = 0;
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
         };
         
         socket.onmessage = function(e) {
@@ -190,14 +242,55 @@
         };
         
         socket.onclose = function(e) {
+            console.log('WebSocket connection closed:', e.code, e.reason);
             updateWSStatus('Disconnected', 'danger');
-            addWSMessage('WebSocket connection closed');
+            addWSMessage(`WebSocket connection closed (Code: ${e.code})`);
+            
+            // Attempt to reconnect if not manually closed
+            if (e.code !== 1000) { // 1000 = normal closure
+                attemptReconnect();
+            }
         };
         
         socket.onerror = function(e) {
+            console.error('WebSocket error:', e);
             updateWSStatus('Error', 'warning');
             addWSMessage('WebSocket error occurred');
         };
+    }
+
+    function attemptReconnect() {
+        if (reconnectAttempts >= maxReconnectAttempts) {
+            updateWSStatus('Failed', 'danger');
+            addWSMessage(`Max reconnection attempts (${maxReconnectAttempts}) reached. Please refresh the page.`);
+            return;
+        }
+
+        reconnectAttempts++;
+        
+        // Exponential backoff: 2s, 4s, 8s, 16s, max 30s
+        const delay = Math.min(baseReconnectInterval * Math.pow(2, reconnectAttempts - 1), 30000);
+        
+        updateWSStatus(`Reconnecting... (${reconnectAttempts}/${maxReconnectAttempts})`, 'warning');
+        addWSMessage(`Attempting to reconnect in ${delay/1000}s (${reconnectAttempts}/${maxReconnectAttempts})...`);
+
+        reconnectTimer = setTimeout(() => {
+            initializeWebSocket();
+        }, delay);
+    }
+
+    function disconnectWebSocket() {
+        if (socket) {
+            // Clear any pending reconnection
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            
+            // Close with normal closure code to prevent auto-reconnect
+            socket.close(1000, 'Manual disconnect');
+            socket = null;
+        }
     }
 
     function updateWSStatus(status, type) {
