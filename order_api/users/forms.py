@@ -5,8 +5,8 @@ from django.contrib.auth import forms as admin_forms
 from django.forms import EmailField
 from django.utils.translation import gettext_lazy as _
 
-from .models import RegistrationRoles
 from .models import User
+from .models import UserRoles
 
 
 class UserAdminChangeForm(admin_forms.UserChangeForm):
@@ -40,7 +40,7 @@ class UserSignupForm(SignupForm):
     name = forms.CharField(max_length=150)
 
     role = forms.ChoiceField(
-        choices=RegistrationRoles.choices,
+        choices=UserRoles.choices,
         widget=forms.Select(attrs={"class": "form-control"}),
         label=_("Role"),
         help_text=_("Select your role"),
@@ -64,7 +64,7 @@ class UserSocialSignupForm(SocialSignupForm):
     name = forms.CharField(max_length=150)
 
     role = forms.ChoiceField(
-        choices=RegistrationRoles.choices,
+        choices=UserRoles.choices,
         widget=forms.Select(attrs={"class": "form-control"}),
         label=_("Role"),
         help_text=_("Select your role"),
