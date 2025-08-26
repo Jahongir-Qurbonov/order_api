@@ -1,0 +1,16 @@
+services:
+  docs:
+    image: order_api_local_docs
+    container_name: order_api_local_docs
+    build:
+      context: .
+      dockerfile: ./compose/local/docs/Dockerfile
+    env_file:
+      - ./.envs/.local/.django
+    volumes:
+      - ./docs:/docs:z
+      - ./config:/app/config:z
+      - ./order_api:/app/order_api:z
+    ports:
+      - '9000:9000'
+    command: /start-docs
