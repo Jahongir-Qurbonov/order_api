@@ -31,11 +31,17 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         match cast("User", request.user).role:
             case UserRoles.CLIENT:
-                pass
+                if request.get_full_path().endswith(
+                    "/receive/",
+                ) and request.get_full_path().endswith("/complete/"):
+                    raise PermissionDenied
             case UserRoles.WORKER:
-                if request.get_full_path().endswith("/receive/"):
-                    if request.method != "POST":
-                        raise PermissionDenied
+                if request.method not in SAFE_METHODS and not (
+                    request.get_full_path().endswith("/receive/")
+                    or request.get_full_path().endswith("/complete/")
+                    or request.get_full_path().endswith("/cancel/")
+                ):
+                    raise PermissionDenied
             case _ if request.method not in SAFE_METHODS:
                 raise PermissionDenied
 
