@@ -1,9 +1,11 @@
 from allauth.account.forms import SignupForm
 from allauth.socialaccount.forms import SignupForm as SocialSignupForm
+from django import forms
 from django.contrib.auth import forms as admin_forms
 from django.forms import EmailField
 from django.utils.translation import gettext_lazy as _
 
+from .models import RegistrationRoles
 from .models import User
 
 
@@ -35,6 +37,19 @@ class UserSignupForm(SignupForm):
     Check UserSocialSignupForm for accounts created from social.
     """
 
+    role = forms.ChoiceField(
+        choices=RegistrationRoles.choices,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        label=_("Role"),
+        help_text=_("Select your role"),
+    )
+
+    def save(self, request):
+        user = super().save(request)
+        user.role = self.cleaned_data["role"]
+        user.save()
+        return user
+
 
 class UserSocialSignupForm(SocialSignupForm):
     """
@@ -42,3 +57,16 @@ class UserSocialSignupForm(SocialSignupForm):
     Default fields will be added automatically.
     See UserSignupForm otherwise.
     """
+
+    role = forms.ChoiceField(
+        choices=RegistrationRoles.choices,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        label=_("Role"),
+        help_text=_("Select your role"),
+    )
+
+    def save(self, request):
+        user = super().save(request)
+        user.role = self.cleaned_data["role"]
+        user.save()
+        return user

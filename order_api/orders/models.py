@@ -11,6 +11,11 @@ class OrderStatus(models.TextChoices):
     CANCELLED = "cancelled", "Cancelled"
 
 
+class PaymentSystem(models.TextChoices):
+    CLICK = "click", "Click"
+    PAYME = "payme", "Payme"
+
+
 class Order(models.Model):
     owner = models.ForeignKey(
         User,
@@ -27,10 +32,18 @@ class Order(models.Model):
     )
 
     description = models.CharField(max_length=255)
+
     status = models.CharField(
         max_length=20,
         choices=OrderStatus.choices,
         default=OrderStatus.CREATED,
+    )
+
+    payment_system = models.CharField(  # noqa: DJ001
+        max_length=20,
+        choices=PaymentSystem.choices,
+        null=True,
+        blank=True,
     )
 
     price = models.DecimalField(max_digits=10, decimal_places=2)

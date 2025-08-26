@@ -55,7 +55,8 @@ class OrderViewSet(viewsets.ModelViewSet):
                 return queryset.filter(owner=self.request.user)
             case UserRoles.WORKER:
                 return queryset.filter(
-                    Q(worker=self.request.user) | Q(worker__isnull=True),
+                    Q(worker=self.request.user)
+                    | (Q(worker__isnull=True) & Q(status=OrderStatus.CREATED)),
                 )
             case _:
                 raise PermissionDenied
@@ -109,6 +110,9 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], serializer_class=PayOrderSerializer)
     def pay(self, request: Request, pk=None):
+        serializer = PayOrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         order = cast("Order", self.get_object())
         user = cast("User", request.user)
 
@@ -125,6 +129,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             raise PermissionDenied(msg)
 
         order.status = OrderStatus.PAID
+        order.payment_system = serializer.validated_data["payment_system"]
         order.save()
 
         serializer = self.get_serializer(order)

@@ -3,6 +3,7 @@ from rest_framework import serializers
 from order_api.users.api.serializers import UserSerializer
 
 from .models import Order
+from .models import PaymentSystem
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -17,6 +18,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "worker",
             "description",
             "status",
+            "payment_system",
             "price",
             "created_at",
             "updated_at",
@@ -26,6 +28,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "owner",
             "worker",
             "status",
+            "payment_system",
             "created_at",
             "updated_at",
         ]
@@ -44,7 +47,7 @@ class CompleteOrderSerializer(serializers.Serializer):
 
 
 class PayOrderSerializer(serializers.Serializer):
-    pass
+    payment_system = serializers.ChoiceField(choices=PaymentSystem.choices)
 
 
 class CancelOrderSerializer(serializers.Serializer):
