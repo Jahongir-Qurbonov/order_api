@@ -25,7 +25,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     def check_permissions(self, request):
         super().check_permissions(request)
 
-        match cast("User", request.user).is_anonymous:
+        match cast("User", request.user).role:
             case UserRoles.CLIENT:
                 pass
             case _ if request.method not in SAFE_METHODS:
