@@ -22,6 +22,15 @@ def order_notification(sender, instance, created, **kwargs):
                 "message": f"New order #{instance.id} created: {instance.description}",
             },
         )
+        # Notify admins about new orders
+        async_to_sync(channel_layer.group_send)(
+            "admins",
+            {
+                "type": "new_order",
+                "order_id": instance.id,
+                "message": f"New order #{instance.id} created: {instance.description}",
+            },
+        )
     else:
         status_display = instance.get_status_display()
         async_to_sync(channel_layer.group_send)(
@@ -45,3 +54,14 @@ def order_notification(sender, instance, created, **kwargs):
                     "message": worker_msg,
                 },
             )
+
+        # Notify admins about all order updates
+        async_to_sync(channel_layer.group_send)(
+            "admins",
+            {
+                "type": "order_status_update",
+                "order_id": instance.id,
+                "status": instance.status,
+                "message": f"Order #{instance.id} status updated to {status_display}",
+            },
+        )

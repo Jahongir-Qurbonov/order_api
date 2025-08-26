@@ -96,6 +96,32 @@
                 </div>
             </div>
         </div>
+    {% elif user.role == 'admin' %}
+        <!-- ADMIN INTERFACE -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <h3>All Orders (Admin View)</h3>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="adminOrdersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Description</th>
+                                <th>Price</th>
+                                <th>Client</th>
+                                <th>Worker</th>
+                                <th>Status</th>
+                                <th>Payment System</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- All orders will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     {% endif %}
 
     <!-- WebSocket Status -->
@@ -405,8 +431,13 @@
                 addWSMessage(`Order #${data.order_id} status: ${data.status}`);
             } else if (userRole === 'worker') {
                 addWSMessage(`Order #${data.order_id} updated: ${data.message}`);
+            } else if (userRole === 'admin') {
+                addWSMessage(`Order #${data.order_id} updated: ${data.message}`);
             }
             loadOrders(); // Refresh orders list
+        } else if (userRole === 'admin') {
+            // Admin sees all messages
+            loadOrders(); // Always refresh for admin
         }
     }
 
@@ -472,6 +503,8 @@
                 renderClientOrders(orders);
             } else if (userRole === 'worker') {
                 renderWorkerOrders(orders);
+            } else if (userRole === 'admin') {
+                renderAdminOrders(orders);
             }
         } catch (error) {
             console.error('Error loading orders:', error);
@@ -564,6 +597,26 @@
                 </td>
             `;
             myTbody.appendChild(row);
+        });
+    }
+
+    function renderAdminOrders(orders) {
+        const tbody = document.querySelector('#adminOrdersTable tbody');
+        tbody.innerHTML = '';
+        
+        orders.forEach(order => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${order.id}</td>
+                <td>${order.description}</td>
+                <td>$${order.price}</td>
+                <td>${order.owner.email}</td>
+                <td>${order.worker ? order.worker.email : 'Unassigned'}</td>
+                <td><span class="badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
+                <td>${order.payment_system ? `<span class="badge bg-${getPaymentSystemColor(order.payment_system)}">${order.payment_system}</span>` : '<span class="text-muted">N/A</span>'}</td>
+                <td>${new Date(order.created_at).toLocaleDateString()}</td>
+            `;
+            tbody.appendChild(row);
         });
     }
 

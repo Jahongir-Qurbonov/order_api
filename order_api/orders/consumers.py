@@ -25,6 +25,8 @@ class OrderConsumer(AsyncWebsocketConsumer):
             self.individual_group = f"worker_{self.user.id}"
         elif cast("User", self.user).role == "client":
             self.group_name = f"client_{self.user.id}"
+        elif cast("User", self.user).role == "admin":
+            self.group_name = "admins"
         else:
             await self.close()
             return
