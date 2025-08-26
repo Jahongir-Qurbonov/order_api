@@ -37,6 +37,8 @@ class UserSignupForm(SignupForm):
     Check UserSocialSignupForm for accounts created from social.
     """
 
+    name = forms.CharField(max_length=150)
+
     role = forms.ChoiceField(
         choices=RegistrationRoles.choices,
         widget=forms.Select(attrs={"class": "form-control"}),
@@ -46,6 +48,7 @@ class UserSignupForm(SignupForm):
 
     def save(self, request):
         user = super().save(request)
+        user.name = self.cleaned_data["name"]
         user.role = self.cleaned_data["role"]
         user.save()
         return user
@@ -58,6 +61,8 @@ class UserSocialSignupForm(SocialSignupForm):
     See UserSignupForm otherwise.
     """
 
+    name = forms.CharField(max_length=150)
+
     role = forms.ChoiceField(
         choices=RegistrationRoles.choices,
         widget=forms.Select(attrs={"class": "form-control"}),
@@ -67,6 +72,7 @@ class UserSocialSignupForm(SocialSignupForm):
 
     def save(self, request):
         user = super().save(request)
+        user.name = self.cleaned_data["name"]
         user.role = self.cleaned_data["role"]
         user.save()
         return user
