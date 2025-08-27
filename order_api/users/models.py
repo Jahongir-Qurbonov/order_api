@@ -21,6 +21,18 @@ class RegistrationRoles(TextChoices):
     WORKER = "worker", _("Worker")
 
 
+class Gender(TextChoices):
+    MALE = "male", _("Male")
+    FEMALE = "female", _("Female")
+
+
+class Specialty(TextChoices):
+    DEVELOPER = "developer", _("Developer")
+    DESIGNER = "designer", _("Designer")
+    MANAGER = "manager", _("Manager")
+    OTHER = "other", _("Other")
+
+
 class User(AbstractUser):
     """
     Default custom user model for Order API.
@@ -40,6 +52,22 @@ class User(AbstractUser):
         blank=False,
         max_length=20,
         choices=UserRoles.choices,
+    )
+
+    gender = CharField(  # noqa: DJ001
+        _("Gender"),
+        max_length=10,
+        choices=Gender.choices,
+        null=True,
+        blank=False,
+    )
+
+    specialty = CharField(  # noqa: DJ001
+        _("Specialty"),
+        max_length=20,
+        choices=Specialty.choices,
+        null=True,
+        blank=True,
     )
 
     username = None  # type: ignore[assignment]

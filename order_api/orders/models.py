@@ -1,5 +1,7 @@
 from django.db import models
 
+from order_api.users.models import Gender
+from order_api.users.models import Specialty
 from order_api.users.models import User
 
 
@@ -29,6 +31,20 @@ class Order(models.Model):
         blank=True,
         on_delete=models.CASCADE,
         related_name="assigned_orders",
+    )
+
+    gender = models.CharField(  # noqa: DJ001
+        max_length=10,
+        choices=Gender.choices,
+        null=True,
+        blank=False,
+    )
+
+    specialty = models.CharField(  # noqa: DJ001
+        max_length=20,
+        choices=Specialty.choices,
+        null=True,
+        blank=False,
     )
 
     description = models.CharField(max_length=255)

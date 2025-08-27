@@ -5,6 +5,8 @@ from django.contrib.auth import forms as admin_forms
 from django.forms import EmailField
 from django.utils.translation import gettext_lazy as _
 
+from .models import Gender
+from .models import Specialty
 from .models import User
 from .models import UserRoles
 
@@ -46,10 +48,26 @@ class UserSignupForm(SignupForm):
         help_text=_("Select your role"),
     )
 
+    gender = forms.ChoiceField(
+        choices=Gender.choices,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        label=_("Gender"),
+        help_text=_("Select your gender"),
+    )
+
+    specialty = forms.ChoiceField(
+        choices=Specialty.choices,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        label=_("Specialty"),
+        help_text=_("Select your specialty"),
+    )
+
     def save(self, request):
         user = super().save(request)
         user.name = self.cleaned_data["name"]
         user.role = self.cleaned_data["role"]
+        user.gender = self.cleaned_data["gender"]
+        user.specialty = self.cleaned_data["specialty"]
         user.save()
         return user
 
@@ -70,9 +88,25 @@ class UserSocialSignupForm(SocialSignupForm):
         help_text=_("Select your role"),
     )
 
+    gender = forms.ChoiceField(
+        choices=Gender.choices,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        label=_("Gender"),
+        help_text=_("Select your gender"),
+    )
+
+    specialty = forms.ChoiceField(
+        choices=Specialty.choices,
+        widget=forms.Select(attrs={"class": "form-control"}),
+        label=_("Specialty"),
+        help_text=_("Select your specialty"),
+    )
+
     def save(self, request):
         user = super().save(request)
         user.name = self.cleaned_data["name"]
         user.role = self.cleaned_data["role"]
+        user.gender = self.cleaned_data["gender"]
+        user.specialty = self.cleaned_data["specialty"]
         user.save()
         return user

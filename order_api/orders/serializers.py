@@ -16,6 +16,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "id",
             "owner",
             "worker",
+            "gender",
+            "specialty",
             "description",
             "status",
             "payment_system",

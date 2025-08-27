@@ -37,6 +37,8 @@
                                 <th>Status</th>
                                 <th>Payment System</th>
                                 <th>Worker</th>
+                                <th>Gender</th>
+                                <th>Specialty</th>
                                 <th>Created</th>
                                 <th>Actions</th>
                             </tr>
@@ -110,6 +112,8 @@
                                 <th>Price</th>
                                 <th>Client</th>
                                 <th>Worker</th>
+                                <th>Gender</th>
+                                <th>Specialty</th>
                                 <th>Status</th>
                                 <th>Payment System</th>
                                 <th>Created</th>
@@ -170,6 +174,22 @@
                     <div class="mb-3">
                         <label for="description" class="form-label">Description</label>
                         <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="gender" class="form-label">Gender</label>
+                        <select class="form-select" id="gender" name="gender" required>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="specialty" class="form-label">Specialty</label>
+                        <select class="form-select" id="specialty" name="specialty" required>
+                            <option value="developer">Developer</option>
+                            <option value="designer">Designer</option>
+                            <option value="manager">Manager</option>
+                            <option value="other">Other</option>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label for="price" class="form-label">Price</label>
@@ -525,6 +545,8 @@
                 <td><span class="badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
                 <td>${order.payment_system ? `<span class="badge bg-${getPaymentSystemColor(order.payment_system)}">${order.payment_system}</span>` : '<span class="text-muted">N/A</span>'}</td>
                 <td>${order.worker ? order.worker.name || order.worker.email : 'Unassigned'}</td>
+                <td>${order.gender}</td>
+                <td>${order.specialty}</td>
                 <td>${new Date(order.created_at).toLocaleDateString()}</td>
                 <td>
                     ${getClientOrderActions(order)}
@@ -612,6 +634,8 @@
                 <td>$${order.price}</td>
                 <td>${order.owner.email}</td>
                 <td>${order.worker ? order.worker.email : 'Unassigned'}</td>
+                <td>${order.gender}</td>
+                <td>${order.specialty}</td>
                 <td><span class="badge bg-${getStatusColor(order.status)}">${order.status}</span></td>
                 <td>${order.payment_system ? `<span class="badge bg-${getPaymentSystemColor(order.payment_system)}">${order.payment_system}</span>` : '<span class="text-muted">N/A</span>'}</td>
                 <td>${new Date(order.created_at).toLocaleDateString()}</td>
@@ -659,7 +683,9 @@
         try {
             const orderData = {
                 description: formData.get('description'),
-                price: parseFloat(formData.get('price'))
+                price: parseFloat(formData.get('price')),
+                gender: formData.get('gender'),
+                specialty: formData.get('specialty')
             };
             
             console.log('Creating order:', orderData);

@@ -47,8 +47,9 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        user = cast("User", self.request.user)
 
-        match cast("User", self.request.user).role:
+        match user.role:
             case UserRoles.ADMIN:
                 return queryset
             case UserRoles.CLIENT:
@@ -56,7 +57,12 @@ class OrderViewSet(viewsets.ModelViewSet):
             case UserRoles.WORKER:
                 return queryset.filter(
                     Q(worker=self.request.user)
-                    | (Q(worker__isnull=True) & Q(status=OrderStatus.CREATED)),
+                    | (
+                        Q(worker__isnull=True)
+                        & Q(status=OrderStatus.CREATED)
+                        & Q(gender=user.gender)
+                        & Q(specialty=user.specialty)
+                    ),
                 )
             case _:
                 raise PermissionDenied
@@ -72,6 +78,14 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         if order.status != OrderStatus.CREATED:
             msg = "Only created orders can be received."
+            raise PermissionDenied(msg)
+
+        if order.gender != user.gender:
+            msg = "You can only receive orders that match your gender."
+            raise PermissionDenied(msg)
+
+        if order.specialty != user.specialty:
+            msg = "You can only receive orders that match your specialty."
             raise PermissionDenied(msg)
 
         if order.worker is not None:
